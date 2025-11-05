@@ -1,0 +1,24 @@
+{
+  "name": "Aarambh - Educational Platform",
+  "short_name": "Aarambh",
+  "description": "Modern educational platform for rural children with offline support",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2b6cb0",
+  "theme_color": "#3182ce",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/placeholder.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/placeholder.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
