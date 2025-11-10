@@ -3,30 +3,31 @@ import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search } from "lucide-react";
+import { Library, Search, ExternalLink, FileText, Video, File } from "lucide-react";
 
-const Notes = () => {
+const StudyResources = () => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [notes, setNotes] = useState<any[]>([]);
+  const [resources, setResources] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchNotes();
+    fetchResources();
   }, []);
 
-  const fetchNotes = async () => {
+  const fetchResources = async () => {
     try {
       const { data, error } = await supabase
-        .from("notes")
+        .from("study_resources")
         .select("*, profiles(name)")
         .order("uploaded_at", { ascending: false });
 
       if (error) throw error;
-      setNotes(data || []);
+      setResources(data || []);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -41,16 +42,26 @@ const Notes = () => {
   const subjects = ["All", "Programming", "Algorithms", "Web Technology", "Cybersecurity"];
   const [activeSubject, setActiveSubject] = useState("All");
 
-  const filteredNotes = notes.filter((note) => {
+  const filteredResources = resources.filter((resource) => {
     const matchesSearch =
-      note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      note.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      note.subject.toLowerCase().includes(searchQuery.toLowerCase());
+      resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      resource.subject.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesSubject = activeSubject === "All" || note.subject === activeSubject;
+    const matchesSubject = activeSubject === "All" || resource.subject === activeSubject;
 
     return matchesSearch && matchesSubject;
   });
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "video":
+        return <Video className="h-5 w-5" />;
+      case "pdf":
+        return <File className="h-5 w-5" />;
+      default:
+        return <FileText className="h-5 w-5" />;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -61,11 +72,11 @@ const Notes = () => {
         <main className="p-4 md:p-6 space-y-6">
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-              <FileText className="h-8 w-8 text-primary" />
-              Study Notes
+              <Library className="h-8 w-8 text-primary" />
+              Study Resources
             </h1>
             <p className="text-muted-foreground mt-1">
-              Browse categorized study notes and resources
+              Access articles, videos, and documents to enhance your learning
             </p>
           </div>
 
@@ -74,7 +85,7 @@ const Notes = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search notes..."
+              placeholder="Search resources..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -82,7 +93,7 @@ const Notes = () => {
           </div>
 
           {/* Subject Filter */}
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-2">
             {subjects.map((subject) => (
               <Badge
                 key={subject}
@@ -97,32 +108,43 @@ const Notes = () => {
 
           {loading ? (
             <Card className="p-12 text-center">
-              <p className="text-muted-foreground">Loading notes...</p>
+              <p className="text-muted-foreground">Loading resources...</p>
             </Card>
-          ) : filteredNotes.length === 0 ? (
+          ) : filteredResources.length === 0 ? (
             <Card className="p-12 text-center">
-              <p className="text-muted-foreground">No notes found</p>
+              <p className="text-muted-foreground">No resources found</p>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {filteredNotes.map((note) => (
-                <Card key={note.id} className="hover:shadow-elevated transition-all">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredResources.map((resource) => (
+                <Card key={resource.id} className="hover:shadow-elevated transition-all">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="space-y-1 flex-1">
                         <Badge variant="secondary" className="mb-2">
-                          {note.subject}
+                          {resource.subject}
                         </Badge>
-                        <CardTitle>{note.title}</CardTitle>
-                        <CardDescription>
-                          By {note.profiles?.name || "Unknown"} •{" "}
-                          {new Date(note.uploaded_at).toLocaleDateString()}
+                        <CardTitle className="line-clamp-2">{resource.title}</CardTitle>
+                        <CardDescription className="flex items-center gap-2">
+                          {getTypeIcon(resource.type)}
+                          <span className="capitalize">{resource.type}</span>
                         </CardDescription>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground whitespace-pre-wrap">{note.content}</p>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2"
+                      onClick={() => window.open(resource.link, "_blank")}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Open Resource
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-3">
+                      By {resource.profiles?.name || "Unknown"} •{" "}
+                      {new Date(resource.uploaded_at).toLocaleDateString()}
+                    </p>
                   </CardContent>
                 </Card>
               ))}
@@ -134,4 +156,4 @@ const Notes = () => {
   );
 };
 
-export default Notes;
+export default StudyResources;

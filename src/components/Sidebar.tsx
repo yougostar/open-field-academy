@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard,
   BookOpen,
@@ -13,13 +14,18 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 
+import { Shield, User, BookOpenIcon } from "lucide-react";
+
 const navItems = [
-  { title: "Dashboard", icon: LayoutDashboard, path: "/" },
+  { title: "Home", icon: LayoutDashboard, path: "/" },
+  { title: "Profile", icon: User, path: "/profile" },
+  { title: "Courses", icon: BookOpenIcon, path: "/courses" },
   { title: "Notes", icon: FileText, path: "/notes" },
   { title: "Quizzes", icon: BookOpen, path: "/quizzes" },
-  { title: "Progress Tracker", icon: TrendingUp, path: "/progress" },
+  { title: "Progress", icon: TrendingUp, path: "/progress" },
   { title: "Life Skills", icon: Heart, path: "/life-skills" },
   { title: "Settings", icon: Settings, path: "/settings" },
+  { title: "Admin", icon: Shield, path: "/admin", adminOnly: true },
 ];
 
 const motivationalQuotes = [
@@ -31,7 +37,30 @@ const motivationalQuotes = [
 
 export const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
   const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
+  
+  useEffect(() => {
+    checkUserRoles();
+  }, []);
+  
+  const checkUserRoles = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+        
+      if (!error && data) {
+        setUserRoles(data.map(r => r.role));
+      }
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+    }
+  };
 
   return (
     <>
@@ -62,6 +91,11 @@ export const Sidebar = () => {
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {navItems.map((item) => {
+            // Hide admin link if user is not admin
+            if (item.adminOnly && !userRoles.includes('admin')) {
+              return null;
+            }
+            
             const Icon = item.icon;
             return (
               <NavLink
