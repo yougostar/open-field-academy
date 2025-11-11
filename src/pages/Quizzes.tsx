@@ -1,83 +1,212 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Clock, Trophy, Target, Play, CheckCircle2 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-
-interface Quiz {
-  id: string;
-  title: string;
-  category: string;
-  questions: number;
-  duration: number;
-  difficulty: "Easy" | "Medium" | "Hard";
-  completed: boolean;
-  score?: number;
-}
+import { Input } from "@/components/ui/input";
+import { Brain, Search } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Quizzes = () => {
-  const [quizzes] = useState<Quiz[]>([
-    {
-      id: "1",
-      title: "Basic Algebra",
-      category: "Math",
-      questions: 10,
-      duration: 15,
-      difficulty: "Easy",
-      completed: true,
-      score: 85,
-    },
-    {
-      id: "2",
-      title: "Physics Fundamentals",
-      category: "Science",
-      questions: 15,
-      duration: 20,
-      difficulty: "Medium",
-      completed: false,
-    },
-    {
-      id: "3",
-      title: "Grammar Advanced",
-      category: "English",
-      questions: 12,
-      duration: 18,
-      difficulty: "Hard",
-      completed: true,
-      score: 92,
-    },
-  ]);
+  const { toast } = useToast();
+  const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedQuiz, setSelectedQuiz] = useState<any>(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [score, setScore] = useState(0);
+  const [showResults, setShowResults] = useState(false);
 
-  const [timedMode, setTimedMode] = useState(true);
-  const [showHints, setShowHints] = useState(true);
-  const [randomOrder, setRandomOrder] = useState(false);
+  useEffect(() => {
+    fetchQuizzes();
+  }, []);
 
-  const startQuiz = (quiz: Quiz) => {
-    toast({
-      title: "Quiz Starting! 🎯",
-      description: `Get ready for ${quiz.title}`,
-    });
+  const fetchQuizzes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("quizzes")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      
+      const groupedQuizzes = data?.reduce((acc: any, quiz: any) => {
+        const existing = acc.find((q: any) => q.subject === quiz.subject);
+        if (existing) {
+          existing.questions.push(quiz);
+        } else {
+          acc.push({
+            id: quiz.subject,
+            subject: quiz.subject,
+            questions: [quiz],
+          });
+        }
+        return acc;
+      }, []);
+
+      setQuizzes(groupedQuizzes || []);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const completedQuizzes = quizzes.filter((q) => q.completed).length;
-  const averageScore =
-    quizzes.filter((q) => q.score).reduce((acc, q) => acc + (q.score || 0), 0) /
-    quizzes.filter((q) => q.score).length;
+  const subjects = ["All", "Programming", "Algorithms", "Web Technology", "Cybersecurity"];
+  const [activeSubject, setActiveSubject] = useState("All");
+
+  const filteredQuizzes = quizzes.filter((quiz) => {
+    const matchesSearch = quiz.subject.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSubject = activeSubject === "All" || quiz.subject === activeSubject;
+    return matchesSearch && matchesSubject;
+  });
+
+  const startQuiz = (quiz: any) => {
+    setSelectedQuiz(quiz);
+    setCurrentQuestionIndex(0);
+    setSelectedAnswer(null);
+    setScore(0);
+    setShowResults(false);
+  };
+
+  const handleAnswerSelect = (answer: string) => {
+    setSelectedAnswer(answer);
+  };
+
+  const handleNextQuestion = () => {
+    if (selectedAnswer === selectedQuiz.questions[currentQuestionIndex].correct_answer) {
+      setScore(score + 1);
+    }
+
+    if (currentQuestionIndex < selectedQuiz.questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setSelectedAnswer(null);
+    } else {
+      setShowResults(true);
+    }
+  };
+
+  const handleRetakeQuiz = () => {
+    setCurrentQuestionIndex(0);
+    setSelectedAnswer(null);
+    setScore(0);
+    setShowResults(false);
+  };
+
+  const handleBackToQuizzes = () => {
+    setSelectedQuiz(null);
+    setShowResults(false);
+  };
+
+  if (selectedQuiz && !showResults) {
+    const currentQuestion = selectedQuiz.questions[currentQuestionIndex];
+    const options = [
+      { key: "A", value: currentQuestion.option_a },
+      { key: "B", value: currentQuestion.option_b },
+      { key: "C", value: currentQuestion.option_c },
+      { key: "D", value: currentQuestion.option_d },
+    ];
+
+    return (
+      <div className="min-h-screen bg-background">
+        <Sidebar />
+        <div className="md:ml-64">
+          <Topbar onSearch={() => {}} />
+          <main className="p-4 md:p-6 space-y-6">
+            <Card className="max-w-3xl mx-auto">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>{selectedQuiz.subject} Quiz</CardTitle>
+                  <Badge variant="outline">
+                    Question {currentQuestionIndex + 1} of {selectedQuiz.questions.length}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="text-lg font-medium">{currentQuestion.question}</div>
+                <div className="space-y-3">
+                  {options.map((option) => (
+                    <Button
+                      key={option.key}
+                      variant={selectedAnswer === option.key ? "default" : "outline"}
+                      className="w-full justify-start text-left h-auto py-4 px-6"
+                      onClick={() => handleAnswerSelect(option.key)}
+                    >
+                      <span className="font-semibold mr-3">{option.key}.</span>
+                      {option.value}
+                    </Button>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={handleBackToQuizzes} className="flex-1">
+                    Back to Quizzes
+                  </Button>
+                  <Button
+                    onClick={handleNextQuestion}
+                    disabled={!selectedAnswer}
+                    className="flex-1"
+                  >
+                    {currentQuestionIndex < selectedQuiz.questions.length - 1
+                      ? "Next Question"
+                      : "Finish Quiz"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (showResults) {
+    const percentage = Math.round((score / selectedQuiz.questions.length) * 100);
+    
+    return (
+      <div className="min-h-screen bg-background">
+        <Sidebar />
+        <div className="md:ml-64">
+          <Topbar onSearch={() => {}} />
+          <main className="p-4 md:p-6 space-y-6">
+            <Card className="max-w-2xl mx-auto text-center">
+              <CardHeader>
+                <CardTitle className="text-3xl">Quiz Complete! 🎉</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <div className="text-6xl font-bold text-primary">{percentage}%</div>
+                  <p className="text-muted-foreground">
+                    You scored {score} out of {selectedQuiz.questions.length}
+                  </p>
+                </div>
+                <div className="flex gap-3 justify-center">
+                  <Button variant="outline" onClick={handleBackToQuizzes}>
+                    Back to Quizzes
+                  </Button>
+                  <Button onClick={handleRetakeQuiz}>Retake Quiz</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
       <div className="md:ml-64">
         <Topbar onSearch={() => {}} />
-        
+
         <main className="p-4 md:p-6 space-y-6">
-          {/* Header */}
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
               <Brain className="h-8 w-8 text-primary" />
@@ -88,182 +217,58 @@ const Quizzes = () => {
             </p>
           </div>
 
-          {/* Quiz Settings */}
-          <Card className="border-primary/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Quiz Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                  <Label htmlFor="timed-mode" className="cursor-pointer">
-                    Timed Mode
-                  </Label>
-                  <Switch
-                    id="timed-mode"
-                    checked={timedMode}
-                    onCheckedChange={setTimedMode}
-                  />
-                </div>
-                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                  <Label htmlFor="show-hints" className="cursor-pointer">
-                    Show Hints
-                  </Label>
-                  <Switch
-                    id="show-hints"
-                    checked={showHints}
-                    onCheckedChange={setShowHints}
-                  />
-                </div>
-                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                  <Label htmlFor="random-order" className="cursor-pointer">
-                    Random Order
-                  </Label>
-                  <Switch
-                    id="random-order"
-                    checked={randomOrder}
-                    onCheckedChange={setRandomOrder}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Brain className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-foreground">{quizzes.length}</div>
-                    <div className="text-xs text-muted-foreground">Total Quizzes</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center">
-                    <CheckCircle2 className="h-5 w-5 text-success" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-success">{completedQuizzes}</div>
-                    <div className="text-xs text-muted-foreground">Completed</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center">
-                    <Trophy className="h-5 w-5 text-warning" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-warning">
-                      {averageScore.toFixed(0)}%
-                    </div>
-                    <div className="text-xs text-muted-foreground">Avg Score</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-info/10 flex items-center justify-center">
-                    <Target className="h-5 w-5 text-info" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-info">
-                      {quizzes.length - completedQuizzes}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Remaining</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search quizzes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
           </div>
 
-          {/* Quizzes Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {quizzes.map((quiz) => (
-              <Card
-                key={quiz.id}
-                className="hover:shadow-elevated transition-all hover:-translate-y-1"
+          <div className="flex flex-wrap gap-2">
+            {subjects.map((subject) => (
+              <Badge
+                key={subject}
+                variant={activeSubject === subject ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => setActiveSubject(subject)}
               >
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg">{quiz.title}</CardTitle>
-                    {quiz.completed && (
-                      <CheckCircle2 className="h-5 w-5 text-success" />
-                    )}
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <Badge variant="secondary">{quiz.category}</Badge>
-                    <Badge
-                      variant={
-                        quiz.difficulty === "Easy"
-                          ? "default"
-                          : quiz.difficulty === "Medium"
-                          ? "secondary"
-                          : "destructive"
-                      }
-                    >
-                      {quiz.difficulty}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Target className="h-4 w-4" />
-                      {quiz.questions} Questions
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      {quiz.duration} Minutes
-                    </div>
-                  </div>
-
-                  {quiz.completed && quiz.score !== undefined && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Your Score</span>
-                        <span className="font-semibold text-foreground">{quiz.score}%</span>
-                      </div>
-                      <Progress value={quiz.score} className="h-2" />
-                    </div>
-                  )}
-
-                  <Button
-                    className="w-full gap-2"
-                    onClick={() => startQuiz(quiz)}
-                    variant={quiz.completed ? "outline" : "default"}
-                  >
-                    {quiz.completed ? (
-                      <>
-                        <Trophy className="h-4 w-4" />
-                        Retake Quiz
-                      </>
-                    ) : (
-                      <>
-                        <Play className="h-4 w-4" />
-                        Start Quiz
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
+                {subject}
+              </Badge>
             ))}
           </div>
+
+          {loading ? (
+            <Card className="p-12 text-center">
+              <p className="text-muted-foreground">Loading quizzes...</p>
+            </Card>
+          ) : filteredQuizzes.length === 0 ? (
+            <Card className="p-12 text-center">
+              <p className="text-muted-foreground">No quizzes found</p>
+            </Card>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredQuizzes.map((quiz) => (
+                <Card
+                  key={quiz.id}
+                  className="hover:shadow-elevated transition-all hover:-translate-y-1"
+                >
+                  <CardHeader>
+                    <CardTitle>{quiz.subject}</CardTitle>
+                    <Badge variant="secondary">{quiz.questions.length} Questions</Badge>
+                  </CardHeader>
+                  <CardContent>
+                    <Button className="w-full" onClick={() => startQuiz(quiz)}>
+                      Start Quiz
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </main>
       </div>
     </div>
