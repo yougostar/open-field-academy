@@ -90,6 +90,7 @@ export type Database = {
       }
       notes: {
         Row: {
+          approved: boolean
           content: string
           id: string
           subject: string
@@ -98,6 +99,7 @@ export type Database = {
           uploaded_by: string
         }
         Insert: {
+          approved?: boolean
           content: string
           id?: string
           subject: string
@@ -106,6 +108,7 @@ export type Database = {
           uploaded_by: string
         }
         Update: {
+          approved?: boolean
           content?: string
           id?: string
           subject?: string
@@ -146,6 +149,7 @@ export type Database = {
       }
       quizzes: {
         Row: {
+          approved: boolean
           correct_answer: string
           created_at: string
           created_by: string
@@ -158,6 +162,7 @@ export type Database = {
           subject: string
         }
         Insert: {
+          approved?: boolean
           correct_answer: string
           created_at?: string
           created_by: string
@@ -170,6 +175,7 @@ export type Database = {
           subject: string
         }
         Update: {
+          approved?: boolean
           correct_answer?: string
           created_at?: string
           created_by?: string
@@ -193,6 +199,7 @@ export type Database = {
       }
       study_resources: {
         Row: {
+          approved: boolean
           id: string
           link: string
           subject: string
@@ -202,6 +209,7 @@ export type Database = {
           uploaded_by: string
         }
         Insert: {
+          approved?: boolean
           id?: string
           link: string
           subject: string
@@ -211,6 +219,7 @@ export type Database = {
           uploaded_by: string
         }
         Update: {
+          approved?: boolean
           id?: string
           link?: string
           subject?: string
@@ -228,6 +237,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      subjects: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

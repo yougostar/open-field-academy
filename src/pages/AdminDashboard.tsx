@@ -8,10 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Shield, Users, BookOpen, FileText, HelpCircle, Library } from "lucide-react";
+import { Shield, Users, BookOpen, FileText, HelpCircle, Library, Pencil, Trash2, Check, X, Plus, Tag } from "lucide-react";
 
 const AdminDashboard = () => {
   const { toast } = useToast();
@@ -24,26 +27,22 @@ const AdminDashboard = () => {
     notes: 0,
     quizzes: 0,
     resources: 0,
+    subjects: 0,
   });
 
-  // Form states
-  const [courseForm, setCourseForm] = useState({ title: "", description: "" });
-  const [noteForm, setNoteForm] = useState({ subject: "", title: "", content: "" });
-  const [quizForm, setQuizForm] = useState({
-    subject: "",
-    question: "",
-    option_a: "",
-    option_b: "",
-    option_c: "",
-    option_d: "",
-    correct_answer: "A",
-  });
-  const [resourceForm, setResourceForm] = useState({
-    subject: "",
-    title: "",
-    type: "article",
-    link: "",
-  });
+  // Data states
+  const [notes, setNotes] = useState<any[]>([]);
+  const [quizzes, setQuizzes] = useState<any[]>([]);
+  const [resources, setResources] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+
+  // Dialog states
+  const [editingNote, setEditingNote] = useState<any>(null);
+  const [editingQuiz, setEditingQuiz] = useState<any>(null);
+  const [editingSubject, setEditingSubject] = useState<any>(null);
+  const [newSubject, setNewSubject] = useState({ name: "", description: "" });
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     checkAdminAccess();
@@ -57,7 +56,6 @@ const AdminDashboard = () => {
         return;
       }
 
-      // Check if user has admin role
       const { data: roleData, error } = await supabase
         .from("user_roles")
         .select("role")
@@ -76,7 +74,7 @@ const AdminDashboard = () => {
       }
 
       setIsAdmin(true);
-      fetchStats();
+      fetchAllData();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -89,13 +87,25 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchAllData = async () => {
+    await Promise.all([
+      fetchStats(),
+      fetchNotes(),
+      fetchQuizzes(),
+      fetchResources(),
+      fetchUsers(),
+      fetchSubjects(),
+    ]);
+  };
+
   const fetchStats = async () => {
-    const [users, courses, notes, quizzes, resources] = await Promise.all([
+    const [users, courses, notes, quizzes, resources, subjects] = await Promise.all([
       supabase.from("profiles").select("*", { count: "exact", head: true }),
       supabase.from("courses").select("*", { count: "exact", head: true }),
       supabase.from("notes").select("*", { count: "exact", head: true }),
       supabase.from("quizzes").select("*", { count: "exact", head: true }),
       supabase.from("study_resources").select("*", { count: "exact", head: true }),
+      supabase.from("subjects").select("*", { count: "exact", head: true }),
     ]);
 
     setStats({
@@ -104,100 +114,197 @@ const AdminDashboard = () => {
       notes: notes.count || 0,
       quizzes: quizzes.count || 0,
       resources: resources.count || 0,
+      subjects: subjects.count || 0,
     });
   };
 
-  const handleCreateCourse = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase.from("courses").insert({
-        ...courseForm,
-        instructor_id: user.id,
-      });
-
-      if (error) throw error;
-
-      toast({ title: "Success!", description: "Course created successfully." });
-      setCourseForm({ title: "", description: "" });
-      fetchStats();
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    }
+  const fetchNotes = async () => {
+    const { data, error } = await supabase
+      .from("notes")
+      .select("*, profiles(name)")
+      .order("uploaded_at", { ascending: false });
+    
+    if (!error && data) setNotes(data);
   };
 
-  const handleCreateNote = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase.from("notes").insert({
-        ...noteForm,
-        uploaded_by: user.id,
-      });
-
-      if (error) throw error;
-
-      toast({ title: "Success!", description: "Note created successfully." });
-      setNoteForm({ subject: "", title: "", content: "" });
-      fetchStats();
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    }
+  const fetchQuizzes = async () => {
+    const { data, error } = await supabase
+      .from("quizzes")
+      .select("*, profiles(name)")
+      .order("created_at", { ascending: false });
+    
+    if (!error && data) setQuizzes(data);
   };
 
-  const handleCreateQuiz = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase.from("quizzes").insert({
-        ...quizForm,
-        created_by: user.id,
-      });
-
-      if (error) throw error;
-
-      toast({ title: "Success!", description: "Quiz created successfully." });
-      setQuizForm({
-        subject: "",
-        question: "",
-        option_a: "",
-        option_b: "",
-        option_c: "",
-        option_d: "",
-        correct_answer: "A",
-      });
-      fetchStats();
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    }
+  const fetchResources = async () => {
+    const { data, error } = await supabase
+      .from("study_resources")
+      .select("*, profiles(name)")
+      .order("uploaded_at", { ascending: false });
+    
+    if (!error && data) setResources(data);
   };
 
-  const handleCreateResource = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase.from("study_resources").insert({
-        ...resourceForm,
-        uploaded_by: user.id,
-      });
-
-      if (error) throw error;
-
-      toast({ title: "Success!", description: "Resource created successfully." });
-      setResourceForm({ subject: "", title: "", type: "article", link: "" });
-      fetchStats();
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    }
+  const fetchUsers = async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*, user_roles(role)")
+      .order("created_at", { ascending: false });
+    
+    if (!error && data) setUsers(data);
   };
+
+  const fetchSubjects = async () => {
+    const { data, error } = await supabase
+      .from("subjects")
+      .select("*")
+      .order("name");
+    
+    if (!error && data) setSubjects(data);
+  };
+
+  const toggleApproval = async (table: string, id: string, currentStatus: boolean) => {
+    const { error } = await supabase
+      .from(table as any)
+      .update({ approved: !currentStatus } as any)
+      .eq("id", id);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Success!", description: `Content ${!currentStatus ? 'approved' : 'rejected'} successfully.` });
+    fetchAllData();
+  };
+
+  const deleteItem = async (table: string, id: string, itemName: string) => {
+    const { error } = await supabase.from(table as any).delete().eq("id", id);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Success!", description: `${itemName} deleted successfully.` });
+    fetchAllData();
+  };
+
+  const updateNote = async () => {
+    if (!editingNote) return;
+
+    const { error } = await supabase
+      .from("notes")
+      .update({
+        title: editingNote.title,
+        subject: editingNote.subject,
+        content: editingNote.content,
+      } as any)
+      .eq("id", editingNote.id);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Success!", description: "Note updated successfully." });
+    setEditingNote(null);
+    fetchAllData();
+  };
+
+  const updateQuiz = async () => {
+    if (!editingQuiz) return;
+
+    const { error } = await supabase
+      .from("quizzes")
+      .update({
+        subject: editingQuiz.subject,
+        question: editingQuiz.question,
+        option_a: editingQuiz.option_a,
+        option_b: editingQuiz.option_b,
+        option_c: editingQuiz.option_c,
+        option_d: editingQuiz.option_d,
+        correct_answer: editingQuiz.correct_answer,
+      } as any)
+      .eq("id", editingQuiz.id);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Success!", description: "Quiz updated successfully." });
+    setEditingQuiz(null);
+    fetchAllData();
+  };
+
+  const changeUserRole = async (userId: string, newRole: 'student' | 'instructor' | 'admin') => {
+    // First delete existing role
+    await supabase.from("user_roles").delete().eq("user_id", userId);
+
+    // Insert new role
+    const { error } = await supabase
+      .from("user_roles")
+      .insert([{ user_id: userId, role: newRole }] as any);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Success!", description: "User role updated successfully." });
+    fetchUsers();
+  };
+
+  const createSubject = async () => {
+    if (!newSubject.name) return;
+
+    const { error } = await supabase
+      .from("subjects")
+      .insert(newSubject);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Success!", description: "Subject created successfully." });
+    setNewSubject({ name: "", description: "" });
+    fetchAllData();
+  };
+
+  const updateSubject = async () => {
+    if (!editingSubject) return;
+
+    const { error } = await supabase
+      .from("subjects")
+      .update({ name: editingSubject.name, description: editingSubject.description })
+      .eq("id", editingSubject.id);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Success!", description: "Subject updated successfully." });
+    setEditingSubject(null);
+    fetchAllData();
+  };
+
+  const filteredNotes = notes.filter(note => 
+    note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    note.subject.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredQuizzes = quizzes.filter(quiz => 
+    quiz.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    quiz.subject.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredUsers = users.filter(user => 
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -219,15 +326,15 @@ const AdminDashboard = () => {
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
               <Shield className="h-8 w-8 text-primary" />
-              Admin Dashboard
+              Admin Control Panel
             </h1>
             <p className="text-muted-foreground mt-1">
-              Manage users, courses, notes, quizzes, and study resources
+              Manage content, users, and platform settings
             </p>
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -242,18 +349,7 @@ const AdminDashboard = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <BookOpen className="h-8 w-8 text-success" />
-                  <div>
-                    <div className="text-2xl font-bold">{stats.courses}</div>
-                    <div className="text-xs text-muted-foreground">Courses</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <FileText className="h-8 w-8 text-warning" />
+                  <FileText className="h-8 w-8 text-success" />
                   <div>
                     <div className="text-2xl font-bold">{stats.notes}</div>
                     <div className="text-xs text-muted-foreground">Notes</div>
@@ -264,7 +360,7 @@ const AdminDashboard = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <HelpCircle className="h-8 w-8 text-info" />
+                  <HelpCircle className="h-8 w-8 text-warning" />
                   <div>
                     <div className="text-2xl font-bold">{stats.quizzes}</div>
                     <div className="text-xs text-muted-foreground">Quizzes</div>
@@ -275,7 +371,7 @@ const AdminDashboard = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <Library className="h-8 w-8 text-secondary" />
+                  <Library className="h-8 w-8 text-info" />
                   <div>
                     <div className="text-2xl font-bold">{stats.resources}</div>
                     <div className="text-xs text-muted-foreground">Resources</div>
@@ -283,232 +379,431 @@ const AdminDashboard = () => {
                 </div>
               </CardContent>
             </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <BookOpen className="h-8 w-8 text-secondary" />
+                  <div>
+                    <div className="text-2xl font-bold">{stats.courses}</div>
+                    <div className="text-xs text-muted-foreground">Courses</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Tag className="h-8 w-8 text-accent" />
+                  <div>
+                    <div className="text-2xl font-bold">{stats.subjects}</div>
+                    <div className="text-xs text-muted-foreground">Subjects</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Management Tabs */}
-          <Tabs defaultValue="courses" className="w-full">
+          <Tabs defaultValue="notes" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="courses">Courses</TabsTrigger>
-              <TabsTrigger value="notes">Notes</TabsTrigger>
-              <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
-              <TabsTrigger value="resources">Resources</TabsTrigger>
+              <TabsTrigger value="notes">Manage Notes</TabsTrigger>
+              <TabsTrigger value="quizzes">Manage Quizzes</TabsTrigger>
+              <TabsTrigger value="users">Manage Users</TabsTrigger>
+              <TabsTrigger value="subjects">Subjects</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="courses">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Create New Course</CardTitle>
-                  <CardDescription>Add a new course to the platform</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleCreateCourse} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="course-title">Course Title</Label>
-                      <Input
-                        id="course-title"
-                        value={courseForm.title}
-                        onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="course-description">Description</Label>
-                      <Textarea
-                        id="course-description"
-                        value={courseForm.description}
-                        onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <Button type="submit">Create Course</Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
+            {/* Notes Management */}
             <TabsContent value="notes">
               <Card>
                 <CardHeader>
-                  <CardTitle>Create New Note</CardTitle>
-                  <CardDescription>Add a new study note</CardDescription>
+                  <CardTitle>Notes Management</CardTitle>
+                  <CardDescription>Approve, edit, or delete study notes</CardDescription>
+                  <Input
+                    placeholder="Search notes..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-sm"
+                  />
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleCreateNote} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="note-subject">Subject</Label>
-                      <Input
-                        id="note-subject"
-                        value={noteForm.subject}
-                        onChange={(e) => setNoteForm({ ...noteForm, subject: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="note-title">Title</Label>
-                      <Input
-                        id="note-title"
-                        value={noteForm.title}
-                        onChange={(e) => setNoteForm({ ...noteForm, title: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="note-content">Content</Label>
-                      <Textarea
-                        id="note-content"
-                        value={noteForm.content}
-                        onChange={(e) => setNoteForm({ ...noteForm, content: e.target.value })}
-                        required
-                        rows={6}
-                      />
-                    </div>
-                    <Button type="submit">Create Note</Button>
-                  </form>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Subject</TableHead>
+                          <TableHead>Author</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredNotes.map((note) => (
+                          <TableRow key={note.id}>
+                            <TableCell className="font-medium">{note.title}</TableCell>
+                            <TableCell>{note.subject}</TableCell>
+                            <TableCell>{note.profiles?.name || 'Unknown'}</TableCell>
+                            <TableCell>
+                              <Badge variant={note.approved ? "default" : "secondary"}>
+                                {note.approved ? "Approved" : "Pending"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right space-x-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => toggleApproval("notes", note.id, note.approved)}
+                              >
+                                {note.approved ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+                              </Button>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setEditingNote(note)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Edit Note</DialogTitle>
+                                    <DialogDescription>Make changes to the note</DialogDescription>
+                                  </DialogHeader>
+                                  {editingNote && (
+                                    <div className="space-y-4">
+                                      <div>
+                                        <Label>Title</Label>
+                                        <Input
+                                          value={editingNote.title}
+                                          onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label>Subject</Label>
+                                        <Input
+                                          value={editingNote.subject}
+                                          onChange={(e) => setEditingNote({ ...editingNote, subject: e.target.value })}
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label>Content</Label>
+                                        <Textarea
+                                          value={editingNote.content}
+                                          onChange={(e) => setEditingNote({ ...editingNote, content: e.target.value })}
+                                          rows={6}
+                                        />
+                                      </div>
+                                      <Button onClick={updateNote}>Save Changes</Button>
+                                    </div>
+                                  )}
+                                </DialogContent>
+                              </Dialog>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => deleteItem("notes", note.id, "Note")}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
+            {/* Quizzes Management */}
             <TabsContent value="quizzes">
               <Card>
                 <CardHeader>
-                  <CardTitle>Create New Quiz Question</CardTitle>
-                  <CardDescription>Add a new quiz question</CardDescription>
+                  <CardTitle>Quiz Management</CardTitle>
+                  <CardDescription>Approve, edit, or delete quiz questions</CardDescription>
+                  <Input
+                    placeholder="Search quizzes..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-sm"
+                  />
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleCreateQuiz} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="quiz-subject">Subject</Label>
-                      <Input
-                        id="quiz-subject"
-                        value={quizForm.subject}
-                        onChange={(e) => setQuizForm({ ...quizForm, subject: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="quiz-question">Question</Label>
-                      <Textarea
-                        id="quiz-question"
-                        value={quizForm.question}
-                        onChange={(e) => setQuizForm({ ...quizForm, question: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="option-a">Option A</Label>
-                        <Input
-                          id="option-a"
-                          value={quizForm.option_a}
-                          onChange={(e) => setQuizForm({ ...quizForm, option_a: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="option-b">Option B</Label>
-                        <Input
-                          id="option-b"
-                          value={quizForm.option_b}
-                          onChange={(e) => setQuizForm({ ...quizForm, option_b: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="option-c">Option C</Label>
-                        <Input
-                          id="option-c"
-                          value={quizForm.option_c}
-                          onChange={(e) => setQuizForm({ ...quizForm, option_c: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="option-d">Option D</Label>
-                        <Input
-                          id="option-d"
-                          value={quizForm.option_d}
-                          onChange={(e) => setQuizForm({ ...quizForm, option_d: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="correct-answer">Correct Answer</Label>
-                      <Select
-                        value={quizForm.correct_answer}
-                        onValueChange={(value) => setQuizForm({ ...quizForm, correct_answer: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="A">Option A</SelectItem>
-                          <SelectItem value="B">Option B</SelectItem>
-                          <SelectItem value="C">Option C</SelectItem>
-                          <SelectItem value="D">Option D</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button type="submit">Create Quiz</Button>
-                  </form>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Question</TableHead>
+                          <TableHead>Subject</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredQuizzes.map((quiz) => (
+                          <TableRow key={quiz.id}>
+                            <TableCell className="font-medium max-w-md truncate">{quiz.question}</TableCell>
+                            <TableCell>{quiz.subject}</TableCell>
+                            <TableCell>
+                              <Badge variant={quiz.approved ? "default" : "secondary"}>
+                                {quiz.approved ? "Approved" : "Pending"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right space-x-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => toggleApproval("quizzes", quiz.id, quiz.approved)}
+                              >
+                                {quiz.approved ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+                              </Button>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setEditingQuiz(quiz)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-2xl">
+                                  <DialogHeader>
+                                    <DialogTitle>Edit Quiz Question</DialogTitle>
+                                  </DialogHeader>
+                                  {editingQuiz && (
+                                    <div className="space-y-4">
+                                      <div>
+                                        <Label>Subject</Label>
+                                        <Input
+                                          value={editingQuiz.subject}
+                                          onChange={(e) => setEditingQuiz({ ...editingQuiz, subject: e.target.value })}
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label>Question</Label>
+                                        <Textarea
+                                          value={editingQuiz.question}
+                                          onChange={(e) => setEditingQuiz({ ...editingQuiz, question: e.target.value })}
+                                        />
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                          <Label>Option A</Label>
+                                          <Input
+                                            value={editingQuiz.option_a}
+                                            onChange={(e) => setEditingQuiz({ ...editingQuiz, option_a: e.target.value })}
+                                          />
+                                        </div>
+                                        <div>
+                                          <Label>Option B</Label>
+                                          <Input
+                                            value={editingQuiz.option_b}
+                                            onChange={(e) => setEditingQuiz({ ...editingQuiz, option_b: e.target.value })}
+                                          />
+                                        </div>
+                                        <div>
+                                          <Label>Option C</Label>
+                                          <Input
+                                            value={editingQuiz.option_c}
+                                            onChange={(e) => setEditingQuiz({ ...editingQuiz, option_c: e.target.value })}
+                                          />
+                                        </div>
+                                        <div>
+                                          <Label>Option D</Label>
+                                          <Input
+                                            value={editingQuiz.option_d}
+                                            onChange={(e) => setEditingQuiz({ ...editingQuiz, option_d: e.target.value })}
+                                          />
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <Label>Correct Answer</Label>
+                                        <Select
+                                          value={editingQuiz.correct_answer}
+                                          onValueChange={(value) => setEditingQuiz({ ...editingQuiz, correct_answer: value })}
+                                        >
+                                          <SelectTrigger>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="A">Option A</SelectItem>
+                                            <SelectItem value="B">Option B</SelectItem>
+                                            <SelectItem value="C">Option C</SelectItem>
+                                            <SelectItem value="D">Option D</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <Button onClick={updateQuiz}>Save Changes</Button>
+                                    </div>
+                                  )}
+                                </DialogContent>
+                              </Dialog>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => deleteItem("quizzes", quiz.id, "Quiz")}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="resources">
+            {/* Users Management */}
+            <TabsContent value="users">
               <Card>
                 <CardHeader>
-                  <CardTitle>Create New Study Resource</CardTitle>
-                  <CardDescription>Add a new study resource</CardDescription>
+                  <CardTitle>User Management</CardTitle>
+                  <CardDescription>Manage user roles and permissions</CardDescription>
+                  <Input
+                    placeholder="Search users..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-sm"
+                  />
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleCreateResource} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="resource-subject">Subject</Label>
-                      <Input
-                        id="resource-subject"
-                        value={resourceForm.subject}
-                        onChange={(e) => setResourceForm({ ...resourceForm, subject: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="resource-title">Title</Label>
-                      <Input
-                        id="resource-title"
-                        value={resourceForm.title}
-                        onChange={(e) => setResourceForm({ ...resourceForm, title: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="resource-type">Type</Label>
-                      <Select
-                        value={resourceForm.type}
-                        onValueChange={(value) => setResourceForm({ ...resourceForm, type: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="article">Article</SelectItem>
-                          <SelectItem value="video">Video</SelectItem>
-                          <SelectItem value="pdf">PDF</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="resource-link">Link/URL</Label>
-                      <Input
-                        id="resource-link"
-                        type="url"
-                        value={resourceForm.link}
-                        onChange={(e) => setResourceForm({ ...resourceForm, link: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <Button type="submit">Create Resource</Button>
-                  </form>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Current Role</TableHead>
+                          <TableHead className="text-right">Change Role</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredUsers.map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-medium">{user.name}</TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>
+                              <Badge>
+                                {user.user_roles?.[0]?.role || 'student'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Select
+                                value={user.user_roles?.[0]?.role || 'student'}
+                                onValueChange={(value) => changeUserRole(user.id, value as 'student' | 'instructor' | 'admin')}
+                              >
+                                <SelectTrigger className="w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="student">Student</SelectItem>
+                                  <SelectItem value="instructor">Instructor</SelectItem>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Subjects Management */}
+            <TabsContent value="subjects">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Subject Management</CardTitle>
+                  <CardDescription>Add, edit, or remove subjects</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Subject name"
+                      value={newSubject.name}
+                      onChange={(e) => setNewSubject({ ...newSubject, name: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Description"
+                      value={newSubject.description}
+                      onChange={(e) => setNewSubject({ ...newSubject, description: e.target.value })}
+                    />
+                    <Button onClick={createSubject}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add
+                    </Button>
+                  </div>
+                  
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Subject Name</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {subjects.map((subject) => (
+                          <TableRow key={subject.id}>
+                            <TableCell className="font-medium">{subject.name}</TableCell>
+                            <TableCell>{subject.description}</TableCell>
+                            <TableCell className="text-right space-x-2">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setEditingSubject(subject)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Edit Subject</DialogTitle>
+                                  </DialogHeader>
+                                  {editingSubject && (
+                                    <div className="space-y-4">
+                                      <div>
+                                        <Label>Name</Label>
+                                        <Input
+                                          value={editingSubject.name}
+                                          onChange={(e) => setEditingSubject({ ...editingSubject, name: e.target.value })}
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label>Description</Label>
+                                        <Input
+                                          value={editingSubject.description}
+                                          onChange={(e) => setEditingSubject({ ...editingSubject, description: e.target.value })}
+                                        />
+                                      </div>
+                                      <Button onClick={updateSubject}>Save Changes</Button>
+                                    </div>
+                                  )}
+                                </DialogContent>
+                              </Dialog>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => deleteItem("subjects", subject.id, "Subject")}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
