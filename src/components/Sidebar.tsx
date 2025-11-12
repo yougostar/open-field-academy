@@ -25,7 +25,7 @@ const navItems = [
   { title: "Progress", icon: TrendingUp, path: "/progress" },
   { title: "Life Skills", icon: Heart, path: "/life-skills" },
   { title: "Settings", icon: Settings, path: "/settings" },
-  { title: "Admin", icon: Shield, path: "/admin", adminOnly: true },
+  { title: "Admin", icon: Shield, path: "/admin-dashboard", adminOnly: true },
 ];
 
 const motivationalQuotes = [
