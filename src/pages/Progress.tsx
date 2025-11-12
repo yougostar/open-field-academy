@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,32 +7,148 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { TrendingUp, Award, BookOpen, Target, Flame, Calendar, Star } from "lucide-react";
-import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const ProgressTracker = () => {
+  const { toast } = useToast();
   const [showWeeklyView, setShowWeeklyView] = useState(false);
   const [showOnlyCompleted, setShowOnlyCompleted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
+  const [stats, setStats] = useState({
+    totalLessons: 0,
+    completedLessons: 0,
+    currentStreak: 0,
+    totalPoints: 0,
+    achievements: 0,
+    avgScore: 0,
+  });
 
-  const stats = {
-    totalLessons: 45,
-    completedLessons: 32,
-    currentStreak: 7,
-    totalPoints: 3240,
-    achievements: 12,
-    avgScore: 87,
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchAllProgress();
+  }, []);
+
+  const fetchAllProgress = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch user stats
+      const { data: userStatsData } = await supabase
+        .from("user_stats")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      // Fetch all lessons count
+      const { count: totalLessonsCount } = await supabase
+        .from("lessons")
+        .select("*", { count: "exact", head: true });
+
+      // Fetch completed lessons count
+      const { count: completedLessonsCount } = await supabase
+        .from("lesson_completions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
+      // Fetch quiz attempts for average score
+      const { data: quizAttemptsData } = await supabase
+        .from("quiz_attempts")
+        .select("score")
+        .eq("user_id", user.id);
+
+      const avgScore = quizAttemptsData && quizAttemptsData.length > 0
+        ? Math.round(quizAttemptsData.reduce((sum, a) => sum + a.score, 0) / quizAttemptsData.length)
+        : 0;
+
+      // Fetch recent quiz attempts
+      const { data: recentAttemptsData } = await supabase
+        .from("quiz_attempts")
+        .select("*, quizzes(question, subject)")
+        .eq("user_id", user.id)
+        .order("completed_at", { ascending: false })
+        .limit(5);
+
+      // Fetch subject progress
+      const { data: subjectsData } = await supabase
+        .from("subjects")
+        .select("*");
+
+      const subjectProgress = await Promise.all(
+        (subjectsData || []).map(async (subject) => {
+          // Get quizzes for this subject
+          const { data: subjectQuizzes } = await supabase
+            .from("quizzes")
+            .select("id")
+            .eq("subject", subject.name);
+
+          // Get completed quizzes for this subject
+          const { data: completedQuizzes } = await supabase
+            .from("quiz_attempts")
+            .select("quiz_id, score")
+            .eq("user_id", user.id)
+            .in("quiz_id", (subjectQuizzes || []).map(q => q.id));
+
+          const total = subjectQuizzes?.length || 0;
+          const completed = new Set(completedQuizzes?.map(q => q.quiz_id) || []).size;
+          const subjectAvgScore = completedQuizzes && completedQuizzes.length > 0
+            ? Math.round(completedQuizzes.reduce((sum, a) => sum + a.score, 0) / completedQuizzes.length)
+            : 0;
+
+          return {
+            name: subject.name,
+            completed,
+            total,
+            score: subjectAvgScore,
+            color: "bg-primary"
+          };
+        })
+      );
+
+      const achievementsArray = Array.isArray(userStatsData?.achievements) 
+        ? userStatsData.achievements 
+        : [];
+
+      setStats({
+        totalLessons: totalLessonsCount || 0,
+        completedLessons: completedLessonsCount || 0,
+        currentStreak: userStatsData?.current_streak || 0,
+        totalPoints: userStatsData?.total_points || 0,
+        achievements: achievementsArray.length,
+        avgScore,
+      });
+
+      setSubjects(subjectProgress);
+      setRecentActivity(
+        (recentAttemptsData || []).map(attempt => ({
+          date: new Date(attempt.completed_at).toLocaleDateString(),
+          lesson: attempt.quizzes?.question?.substring(0, 50) + "..." || "Quiz",
+          score: attempt.score,
+          category: attempt.quizzes?.subject || "General"
+        }))
+      );
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const subjects = [
-    { name: "Mathematics", completed: 12, total: 15, score: 92, color: "bg-primary" },
-    { name: "Science", completed: 10, total: 15, score: 85, color: "bg-success" },
-    { name: "English", completed: 10, total: 15, score: 88, color: "bg-warning" },
-  ];
-
-  const recentActivity = [
-    { date: "2024-01-20", lesson: "Algebra Basics", score: 95, category: "Math" },
-    { date: "2024-01-19", lesson: "Cell Structure", score: 88, category: "Science" },
-    { date: "2024-01-18", lesson: "Grammar Rules", score: 92, category: "English" },
-  ];
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p>Loading progress...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -177,11 +294,11 @@ const ProgressTracker = () => {
                   {stats.completedLessons} of {stats.totalLessons} lessons completed
                 </span>
                 <span className="font-semibold text-foreground">
-                  {Math.round((stats.completedLessons / stats.totalLessons) * 100)}%
+                  {stats.totalLessons > 0 ? Math.round((stats.completedLessons / stats.totalLessons) * 100) : 0}%
                 </span>
               </div>
               <Progress
-                value={(stats.completedLessons / stats.totalLessons) * 100}
+                value={stats.totalLessons > 0 ? (stats.completedLessons / stats.totalLessons) * 100 : 0}
                 className="h-3"
               />
             </CardContent>
@@ -203,7 +320,7 @@ const ProgressTracker = () => {
                       </span>
                     </div>
                     <Progress
-                      value={(subject.completed / subject.total) * 100}
+                      value={subject.total > 0 ? (subject.completed / subject.total) * 100 : 0}
                       className="h-2"
                     />
                   </div>
@@ -225,28 +342,34 @@ const ProgressTracker = () => {
               <CardTitle>Recent Activity</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {recentActivity.map((activity, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <BookOpen className="h-5 w-5 text-primary" />
+              {recentActivity.length > 0 ? (
+                <div className="space-y-3">
+                  {recentActivity.map((activity, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-4 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <BookOpen className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-foreground">{activity.lesson}</div>
+                          <div className="text-sm text-muted-foreground">{activity.date}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-semibold text-foreground">{activity.lesson}</div>
-                        <div className="text-sm text-muted-foreground">{activity.date}</div>
+                      <div className="flex items-center gap-3">
+                        <Badge>{activity.category}</Badge>
+                        <div className="text-lg font-bold text-success">{activity.score}%</div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Badge>{activity.category}</Badge>
-                      <div className="text-lg font-bold text-success">{activity.score}%</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  No activity yet. Start completing quizzes and lessons to track your progress!
+                </p>
+              )}
             </CardContent>
           </Card>
         </main>

@@ -80,7 +80,7 @@ const Quizzes = () => {
     setSelectedAnswer(answer);
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = async () => {
     if (selectedAnswer === selectedQuiz.questions[currentQuestionIndex].correct_answer) {
       setScore(score + 1);
     }
@@ -89,7 +89,40 @@ const Quizzes = () => {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedAnswer(null);
     } else {
+      // Quiz finished - save attempt
+      const finalScore = selectedAnswer === selectedQuiz.questions[currentQuestionIndex].correct_answer 
+        ? score + 1 
+        : score;
+      
+      await saveQuizAttempt(finalScore);
       setShowResults(true);
+    }
+  };
+
+  const saveQuizAttempt = async (finalScore: number) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const percentage = Math.round((finalScore / selectedQuiz.questions.length) * 100);
+      
+      // Save attempts for each question in the quiz
+      for (const question of selectedQuiz.questions) {
+        await supabase
+          .from("quiz_attempts")
+          .insert({
+            user_id: user.id,
+            quiz_id: question.id,
+            score: percentage,
+          });
+      }
+
+      toast({
+        title: "Progress Saved!",
+        description: `Your score of ${percentage}% has been recorded.`,
+      });
+    } catch (error: any) {
+      console.error("Error saving quiz attempt:", error);
     }
   };
 

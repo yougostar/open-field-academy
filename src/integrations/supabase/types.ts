@@ -88,6 +88,70 @@ export type Database = {
           },
         ]
       }
+      lesson_completions: {
+        Row: {
+          completed_at: string
+          id: string
+          lesson_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          id?: string
+          lesson_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          id?: string
+          lesson_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_completions_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lessons: {
+        Row: {
+          content: string
+          course_id: string
+          created_at: string
+          id: string
+          order_number: number
+          title: string
+        }
+        Insert: {
+          content: string
+          course_id: string
+          created_at?: string
+          id?: string
+          order_number: number
+          title: string
+        }
+        Update: {
+          content?: string
+          course_id?: string
+          created_at?: string
+          id?: string
+          order_number?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notes: {
         Row: {
           approved: boolean
@@ -146,6 +210,38 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      quiz_attempts: {
+        Row: {
+          completed_at: string
+          id: string
+          quiz_id: string
+          score: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          id?: string
+          quiz_id: string
+          score: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          id?: string
+          quiz_id?: string
+          score?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quizzes: {
         Row: {
@@ -284,6 +380,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_stats: {
+        Row: {
+          achievements: Json | null
+          created_at: string
+          current_streak: number
+          id: string
+          last_activity_date: string | null
+          total_points: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          achievements?: Json | null
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_activity_date?: string | null
+          total_points?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          achievements?: Json | null
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_activity_date?: string | null
+          total_points?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

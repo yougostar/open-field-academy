@@ -36,12 +36,18 @@ const AdminDashboard = () => {
   const [resources, setResources] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [lessons, setLessons] = useState<any[]>([]);
 
   // Dialog states
   const [editingNote, setEditingNote] = useState<any>(null);
   const [editingQuiz, setEditingQuiz] = useState<any>(null);
   const [editingSubject, setEditingSubject] = useState<any>(null);
+  const [editingCourse, setEditingCourse] = useState<any>(null);
+  const [editingLesson, setEditingLesson] = useState<any>(null);
   const [newSubject, setNewSubject] = useState({ name: "", description: "" });
+  const [newCourse, setNewCourse] = useState({ title: "", description: "" });
+  const [newLesson, setNewLesson] = useState({ course_id: "", title: "", content: "", order_number: 1 });
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -95,6 +101,8 @@ const AdminDashboard = () => {
       fetchResources(),
       fetchUsers(),
       fetchSubjects(),
+      fetchCourses(),
+      fetchLessons(),
     ]);
   };
 
@@ -155,12 +163,30 @@ const AdminDashboard = () => {
   };
 
   const fetchSubjects = async () => {
-    const { data, error } = await supabase
+    const { data, error} = await supabase
       .from("subjects")
       .select("*")
       .order("name");
     
     if (!error && data) setSubjects(data);
+  };
+
+  const fetchCourses = async () => {
+    const { data, error } = await supabase
+      .from("courses")
+      .select("*, profiles(name)")
+      .order("created_at", { ascending: false });
+    
+    if (!error && data) setCourses(data);
+  };
+
+  const fetchLessons = async () => {
+    const { data, error } = await supabase
+      .from("lessons")
+      .select("*, courses(title)")
+      .order("order_number");
+    
+    if (!error && data) setLessons(data);
   };
 
   const toggleApproval = async (table: string, id: string, currentStatus: boolean) => {
@@ -291,6 +317,83 @@ const AdminDashboard = () => {
     fetchAllData();
   };
 
+  const createCourse = async () => {
+    if (!newCourse.title) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("courses")
+      .insert({ ...newCourse, instructor_id: user.id });
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Success!", description: "Course created successfully." });
+    setNewCourse({ title: "", description: "" });
+    fetchAllData();
+  };
+
+  const updateCourse = async () => {
+    if (!editingCourse) return;
+
+    const { error } = await supabase
+      .from("courses")
+      .update({ title: editingCourse.title, description: editingCourse.description })
+      .eq("id", editingCourse.id);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Success!", description: "Course updated successfully." });
+    setEditingCourse(null);
+    fetchAllData();
+  };
+
+  const createLesson = async () => {
+    if (!newLesson.course_id || !newLesson.title) return;
+
+    const { error } = await supabase
+      .from("lessons")
+      .insert(newLesson);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Success!", description: "Lesson created successfully." });
+    setNewLesson({ course_id: "", title: "", content: "", order_number: 1 });
+    fetchAllData();
+  };
+
+  const updateLesson = async () => {
+    if (!editingLesson) return;
+
+    const { error } = await supabase
+      .from("lessons")
+      .update({ 
+        title: editingLesson.title, 
+        content: editingLesson.content,
+        order_number: editingLesson.order_number 
+      })
+      .eq("id", editingLesson.id);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Success!", description: "Lesson updated successfully." });
+    setEditingLesson(null);
+    fetchAllData();
+  };
+
   const filteredNotes = notes.filter(note => 
     note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     note.subject.toLowerCase().includes(searchTerm.toLowerCase())
@@ -404,13 +507,229 @@ const AdminDashboard = () => {
           </div>
 
           {/* Management Tabs */}
-          <Tabs defaultValue="notes" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="notes">Manage Notes</TabsTrigger>
-              <TabsTrigger value="quizzes">Manage Quizzes</TabsTrigger>
-              <TabsTrigger value="users">Manage Users</TabsTrigger>
+          <Tabs defaultValue="courses" className="w-full">
+            <TabsList className="grid w-full grid-cols-6">
+              <TabsTrigger value="courses">Courses</TabsTrigger>
+              <TabsTrigger value="lessons">Lessons</TabsTrigger>
+              <TabsTrigger value="notes">Notes</TabsTrigger>
+              <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
+              <TabsTrigger value="users">Users</TabsTrigger>
               <TabsTrigger value="subjects">Subjects</TabsTrigger>
             </TabsList>
+
+            {/* Courses Management */}
+            <TabsContent value="courses">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Courses Management</CardTitle>
+                  <CardDescription>Create and manage courses</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Course title"
+                      value={newCourse.title}
+                      onChange={(e) => setNewCourse({ ...newCourse, title: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Description"
+                      value={newCourse.description}
+                      onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })}
+                    />
+                    <Button onClick={createCourse}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add
+                    </Button>
+                  </div>
+                  
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Instructor</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {courses.map((course) => (
+                          <TableRow key={course.id}>
+                            <TableCell className="font-medium">{course.title}</TableCell>
+                            <TableCell className="max-w-md truncate">{course.description}</TableCell>
+                            <TableCell>{course.profiles?.name || 'Unknown'}</TableCell>
+                            <TableCell className="text-right space-x-2">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setEditingCourse(course)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Edit Course</DialogTitle>
+                                  </DialogHeader>
+                                  {editingCourse && (
+                                    <div className="space-y-4">
+                                      <div>
+                                        <Label>Title</Label>
+                                        <Input
+                                          value={editingCourse.title}
+                                          onChange={(e) => setEditingCourse({ ...editingCourse, title: e.target.value })}
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label>Description</Label>
+                                        <Textarea
+                                          value={editingCourse.description}
+                                          onChange={(e) => setEditingCourse({ ...editingCourse, description: e.target.value })}
+                                        />
+                                      </div>
+                                      <Button onClick={updateCourse}>Save Changes</Button>
+                                    </div>
+                                  )}
+                                </DialogContent>
+                              </Dialog>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => deleteItem("courses", course.id, "Course")}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Lessons Management */}
+            <TabsContent value="lessons">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Lessons Management</CardTitle>
+                  <CardDescription>Create and manage course lessons</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select value={newLesson.course_id} onValueChange={(value) => setNewLesson({ ...newLesson, course_id: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select course" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {courses.map((course) => (
+                          <SelectItem key={course.id} value={course.id}>{course.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      placeholder="Order"
+                      value={newLesson.order_number}
+                      onChange={(e) => setNewLesson({ ...newLesson, order_number: parseInt(e.target.value) })}
+                    />
+                    <Input
+                      placeholder="Lesson title"
+                      value={newLesson.title}
+                      onChange={(e) => setNewLesson({ ...newLesson, title: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Content"
+                      value={newLesson.content}
+                      onChange={(e) => setNewLesson({ ...newLesson, content: e.target.value })}
+                    />
+                    <Button onClick={createLesson} className="col-span-2">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Lesson
+                    </Button>
+                  </div>
+                  
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Order</TableHead>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Course</TableHead>
+                          <TableHead>Content</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {lessons.map((lesson) => (
+                          <TableRow key={lesson.id}>
+                            <TableCell>{lesson.order_number}</TableCell>
+                            <TableCell className="font-medium">{lesson.title}</TableCell>
+                            <TableCell>{lesson.courses?.title || 'Unknown'}</TableCell>
+                            <TableCell className="max-w-md truncate">{lesson.content}</TableCell>
+                            <TableCell className="text-right space-x-2">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setEditingLesson(lesson)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Edit Lesson</DialogTitle>
+                                  </DialogHeader>
+                                  {editingLesson && (
+                                    <div className="space-y-4">
+                                      <div>
+                                        <Label>Order Number</Label>
+                                        <Input
+                                          type="number"
+                                          value={editingLesson.order_number}
+                                          onChange={(e) => setEditingLesson({ ...editingLesson, order_number: parseInt(e.target.value) })}
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label>Title</Label>
+                                        <Input
+                                          value={editingLesson.title}
+                                          onChange={(e) => setEditingLesson({ ...editingLesson, title: e.target.value })}
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label>Content</Label>
+                                        <Textarea
+                                          value={editingLesson.content}
+                                          onChange={(e) => setEditingLesson({ ...editingLesson, content: e.target.value })}
+                                        />
+                                      </div>
+                                      <Button onClick={updateLesson}>Save Changes</Button>
+                                    </div>
+                                  )}
+                                </DialogContent>
+                              </Dialog>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => deleteItem("lessons", lesson.id, "Lesson")}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             {/* Notes Management */}
             <TabsContent value="notes">
