@@ -71,7 +71,7 @@ const Profile = () => {
       setProfile(profileData);
       setEditedName(profileData.name);
       setEditedEmail(profileData.email);
-      setAvatarUrl(profileData.avatar_url);
+      setAvatarUrl((profileData as any).avatar_url);
       setRoles(rolesData.map((r) => r.role));
       setEnrollments(enrollmentsData || []);
     } catch (error: any) {
@@ -117,7 +117,7 @@ const Profile = () => {
       // Update profile
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })
+        .update({ avatar_url: publicUrl } as any)
         .eq('id', user.id);
 
       if (updateError) throw updateError;
