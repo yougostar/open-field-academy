@@ -56,7 +56,7 @@ const Notes = () => {
     }
   };
 
-  const classes = ["All", "Class 10", "Class 11", "Class 12"];
+  const classes = ["All", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5"];
   const subjects = ["All", "Maths", "Science", "Social Science", "Hindi", "English"];
   const [activeClass, setActiveClass] = useState("All");
   const [activeSubject, setActiveSubject] = useState("All");
@@ -66,7 +66,7 @@ const Notes = () => {
   const [newNote, setNewNote] = useState({
     title: "",
     subject: "Maths",
-    class: "Class 10",
+    class: "Class 1",
     file: null as File | null,
   });
 
@@ -116,7 +116,7 @@ const Notes = () => {
       });
 
       setUploadDialogOpen(false);
-      setNewNote({ title: "", subject: "Maths", class: "Class 10", file: null });
+      setNewNote({ title: "", subject: "Maths", class: "Class 1", file: null });
       fetchNotes();
     } catch (error: any) {
       toast({
