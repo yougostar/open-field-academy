@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, Upload, Download, Eye, Plus } from "lucide-react";
+import { FileText, Search, Upload, Download, Eye, Plus, Trash2 } from "lucide-react";
 
 const Notes = () => {
   const { toast } = useToast();
@@ -126,6 +126,38 @@ const Notes = () => {
       });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDelete = async (noteId: string, fileUrl: string) => {
+    if (!confirm("Are you sure you want to delete this note?")) return;
+
+    try {
+      // Extract file name from URL
+      const fileName = fileUrl.split("/").pop();
+      
+      // Delete from storage
+      if (fileName) {
+        await supabase.storage.from("notes").remove([fileName]);
+      }
+
+      // Delete from database
+      const { error } = await supabase.from("notes").delete().eq("id", noteId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Note deleted successfully",
+      });
+
+      fetchNotes();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -333,6 +365,17 @@ const Notes = () => {
                           Download
                         </Button>
                       </div>
+                    )}
+                    {isAdmin && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => handleDelete(note.id, note.file_url)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
                     )}
                   </CardContent>
                 </Card>
