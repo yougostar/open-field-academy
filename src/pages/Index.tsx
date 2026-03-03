@@ -4,6 +4,9 @@ import { Topbar } from "@/components/Topbar";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { LessonCard } from "@/components/LessonCard";
 import { GoogleTranslate } from "@/components/GoogleTranslate";
+import { DashboardStats } from "@/components/DashboardStats";
+import { QuickActions } from "@/components/QuickActions";
+import { RecentActivityFeed } from "@/components/RecentActivityFeed";
 import { Button } from "@/components/ui/button";
 import { Search, Download } from "lucide-react";
 import mathImage from "@/assets/feature-ai.jpg";
@@ -20,62 +23,14 @@ interface Lesson {
 }
 
 const allLessons: Lesson[] = [
-  {
-    id: "1",
-    title: "Introduction to Algebra",
-    description: "Learn the basics of algebra with fun examples and interactive exercises.",
-    image: mathImage,
-    category: "Math",
-  },
-  {
-    id: "2",
-    title: "Geometry Fundamentals",
-    description: "Explore shapes, angles, and spatial relationships in this comprehensive guide.",
-    image: mathImage,
-    category: "Math",
-  },
-  {
-    id: "3",
-    title: "Physics: Force and Motion",
-    description: "Understand Newton's laws and how objects move in the physical world.",
-    image: scienceImage,
-    category: "Science",
-  },
-  {
-    id: "4",
-    title: "Biology: Cell Structure",
-    description: "Dive into the microscopic world of cells and their amazing functions.",
-    image: scienceImage,
-    category: "Science",
-  },
-  {
-    id: "5",
-    title: "English Grammar Basics",
-    description: "Master the fundamentals of English grammar with simple explanations.",
-    image: englishImage,
-    category: "English",
-  },
-  {
-    id: "6",
-    title: "Creative Writing Workshop",
-    description: "Unleash your creativity and learn storytelling techniques.",
-    image: englishImage,
-    category: "English",
-  },
-  {
-    id: "7",
-    title: "Chemistry: Elements & Compounds",
-    description: "Discover the building blocks of matter and chemical reactions.",
-    image: scienceImage,
-    category: "Science",
-  },
-  {
-    id: "8",
-    title: "Math Word Problems",
-    description: "Solve real-world problems using mathematical thinking and logic.",
-    image: mathImage,
-    category: "Math",
-  },
+  { id: "1", title: "Introduction to Algebra", description: "Learn the basics of algebra with fun examples and interactive exercises.", image: mathImage, category: "Math" },
+  { id: "2", title: "Geometry Fundamentals", description: "Explore shapes, angles, and spatial relationships in this comprehensive guide.", image: mathImage, category: "Math" },
+  { id: "3", title: "Physics: Force and Motion", description: "Understand Newton's laws and how objects move in the physical world.", image: scienceImage, category: "Science" },
+  { id: "4", title: "Biology: Cell Structure", description: "Dive into the microscopic world of cells and their amazing functions.", image: scienceImage, category: "Science" },
+  { id: "5", title: "English Grammar Basics", description: "Master the fundamentals of English grammar with simple explanations.", image: englishImage, category: "English" },
+  { id: "6", title: "Creative Writing Workshop", description: "Unleash your creativity and learn storytelling techniques.", image: englishImage, category: "English" },
+  { id: "7", title: "Chemistry: Elements & Compounds", description: "Discover the building blocks of matter and chemical reactions.", image: scienceImage, category: "Science" },
+  { id: "8", title: "Math Word Problems", description: "Solve real-world problems using mathematical thinking and logic.", image: mathImage, category: "Math" },
 ];
 
 const Index = () => {
@@ -84,7 +39,6 @@ const Index = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
-    // Listen for PWA install prompt
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -128,20 +82,13 @@ const Index = () => {
             <section className="relative overflow-hidden rounded-3xl bg-gradient-primary p-8 md:p-12">
               <div className="grid md:grid-cols-2 gap-8 items-center">
                 <div className="space-y-4 text-white">
-                  <h1 className="text-4xl md:text-5xl font-bold">
-                    Welcome to Aarambh
-                  </h1>
+                  <h1 className="text-4xl md:text-5xl font-bold">Welcome to Aarambh</h1>
                   <p className="text-lg text-white/90">
                     Start your learning journey with interactive lessons, offline access, and personalized progress tracking.
                   </p>
                   <div className="flex flex-wrap gap-3">
                     {deferredPrompt && (
-                      <Button
-                        variant="secondary"
-                        size="lg"
-                        onClick={handleInstallClick}
-                        className="gap-2"
-                      >
+                      <Button variant="secondary" size="lg" onClick={handleInstallClick} className="gap-2">
                         <Download className="h-5 w-5" />
                         Install App
                       </Button>
@@ -159,38 +106,44 @@ const Index = () => {
                   </div>
                 </div>
                 <div className="hidden md:block">
-                  <img
-                    src={heroImage}
-                    alt="Students learning"
-                    className="rounded-2xl shadow-elevated animate-float"
-                  />
+                  <img src={heroImage} alt="Students learning" className="rounded-2xl shadow-elevated animate-float" />
                 </div>
               </div>
             </section>
 
+            {/* Dashboard Stats */}
+            <section>
+              <h2 className="text-2xl font-bold text-foreground mb-4">Your Progress</h2>
+              <DashboardStats />
+            </section>
+
+            {/* Quick Actions */}
+            <QuickActions />
+
+            {/* Recent Activity + Google Translate */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <RecentActivityFeed />
+              <div className="space-y-4">
+                <GoogleTranslate />
+              </div>
+            </div>
+
             {/* Categories */}
             <section>
-              <h2 className="text-2xl font-bold text-foreground mb-6">
-                Browse by Category
-              </h2>
+              <h2 className="text-2xl font-bold text-foreground mb-6">Browse by Category</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {["All", "Math", "Science", "English"].map((category) => (
                   <Button
                     key={category}
                     variant={searchQuery === category.toLowerCase() ? "default" : "outline"}
-                    onClick={() =>
-                      setSearchQuery(category === "All" ? "" : category.toLowerCase())
-                    }
-                    className="h-auto py-4"
+                    onClick={() => setSearchQuery(category === "All" ? "" : category.toLowerCase())}
+                    className="h-auto py-4 transition-all duration-200 hover:scale-[1.02]"
                   >
                     {category}
                   </Button>
                 ))}
               </div>
             </section>
-
-            {/* Google Translate */}
-            <GoogleTranslate />
 
             {/* Featured Lessons */}
             <section>
@@ -205,23 +158,18 @@ const Index = () => {
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-muted-foreground">
-                    No lessons found. Try a different search term.
-                  </p>
+                  <p className="text-muted-foreground">No lessons found. Try a different search term.</p>
                 </div>
               )}
             </section>
           </main>
 
-          {/* Footer */}
           <footer className="border-t border-border mt-12 p-6 bg-muted/30">
             <div className="max-w-7xl mx-auto">
               <div className="grid md:grid-cols-3 gap-8 mb-6">
                 <div>
                   <h3 className="font-bold text-lg mb-3">Aarambh</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Empowering rural education through technology.
-                  </p>
+                  <p className="text-sm text-muted-foreground">Empowering rural education through technology.</p>
                 </div>
                 <div>
                   <h4 className="font-semibold mb-3">Quick Links</h4>
@@ -241,7 +189,7 @@ const Index = () => {
                 </div>
               </div>
               <div className="pt-6 border-t border-border text-center text-sm text-muted-foreground">
-                © 2024 Aarambh. All rights reserved.
+                &copy; 2024 Aarambh. All rights reserved.
               </div>
             </div>
           </footer>
