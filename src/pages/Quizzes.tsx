@@ -32,9 +32,10 @@ const Quizzes = () => {
       const { data, error } = await supabase.from("quizzes").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       const grouped = data?.reduce((acc: any, quiz: any) => {
-        const existing = acc.find((q: any) => q.subject === quiz.subject);
+        const key = `${quiz.subject}-${(quiz as any).difficulty || 'easy'}`;
+        const existing = acc.find((q: any) => q.groupKey === key);
         if (existing) existing.questions.push(quiz);
-        else acc.push({ id: quiz.subject, subject: quiz.subject, questions: [quiz] });
+        else acc.push({ id: key, groupKey: key, subject: quiz.subject, difficulty: (quiz as any).difficulty || 'easy', questions: [quiz] });
         return acc;
       }, []);
       setQuizzes(grouped || []);
@@ -43,13 +44,16 @@ const Quizzes = () => {
     } finally { setLoading(false); }
   };
 
-  const subjects = ["All", "Programming", "Algorithms", "Web Technology", "Cybersecurity"];
+  const subjects = ["All", "Maths", "Science", "Social Science", "Hindi", "English"];
+  const difficulties = ["All", "easy", "moderate", "hard"];
   const [activeSubject, setActiveSubject] = useState("All");
+  const [activeDifficulty, setActiveDifficulty] = useState("All");
 
   const filteredQuizzes = quizzes.filter((quiz) => {
     const matchesSearch = quiz.subject.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSubject = activeSubject === "All" || quiz.subject === activeSubject;
-    return matchesSearch && matchesSubject;
+    const matchesDifficulty = activeDifficulty === "All" || quiz.difficulty === activeDifficulty;
+    return matchesSearch && matchesSubject && matchesDifficulty;
   });
 
   const startQuiz = (quiz: any) => {
@@ -265,10 +269,33 @@ const Quizzes = () => {
             <Input type="search" placeholder="Search quizzes..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {subjects.map((subject) => (
-              <Badge key={subject} variant={activeSubject === subject ? "default" : "outline"} className="cursor-pointer transition-all hover:scale-105" onClick={() => setActiveSubject(subject)}>{subject}</Badge>
-            ))}
+          <div>
+            <p className="text-sm font-medium mb-2">Filter by Subject:</p>
+            <div className="flex flex-wrap gap-2">
+              {subjects.map((subject) => (
+                <Badge key={subject} variant={activeSubject === subject ? "default" : "outline"} className="cursor-pointer transition-all hover:scale-105" onClick={() => setActiveSubject(subject)}>{subject}</Badge>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium mb-2">Filter by Difficulty:</p>
+            <div className="flex flex-wrap gap-2">
+              {difficulties.map((d) => (
+                <Badge
+                  key={d}
+                  variant={activeDifficulty === d ? "default" : "outline"}
+                  className={`cursor-pointer transition-all hover:scale-105 ${
+                    d === 'easy' && activeDifficulty === d ? 'bg-green-600 hover:bg-green-700' :
+                    d === 'moderate' && activeDifficulty === d ? 'bg-yellow-600 hover:bg-yellow-700' :
+                    d === 'hard' && activeDifficulty === d ? 'bg-red-600 hover:bg-red-700' : ''
+                  }`}
+                  onClick={() => setActiveDifficulty(d)}
+                >
+                  {d === 'All' ? d : d.charAt(0).toUpperCase() + d.slice(1)}
+                </Badge>
+              ))}
+            </div>
           </div>
 
           {loading ? (
@@ -277,20 +304,28 @@ const Quizzes = () => {
             <Card className="p-12 text-center"><p className="text-muted-foreground">No quizzes found</p></Card>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredQuizzes.map((quiz, i) => (
-                <Card key={quiz.id} className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 animate-fade-in" style={{ animationDelay: `${i * 80}ms` }}>
-                  <CardHeader>
-                    <CardTitle>{quiz.subject}</CardTitle>
-                    <Badge variant="secondary">{quiz.questions.length} Questions</Badge>
-                  </CardHeader>
-                  <CardContent>
-                    <Button className="w-full group" onClick={() => startQuiz(quiz)}>
-                      <Brain className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />
-                      Start Quiz
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+              {filteredQuizzes.map((quiz, i) => {
+                const diffColor = quiz.difficulty === 'easy' ? 'bg-green-500/10 text-green-700 border-green-500/30' :
+                  quiz.difficulty === 'moderate' ? 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30' :
+                  'bg-red-500/10 text-red-700 border-red-500/30';
+                return (
+                  <Card key={quiz.id} className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 animate-fade-in" style={{ animationDelay: `${i * 80}ms` }}>
+                    <CardHeader>
+                      <CardTitle className="text-lg">{quiz.subject}</CardTitle>
+                      <div className="flex gap-2 flex-wrap">
+                        <Badge variant="secondary">{quiz.questions.length} Questions</Badge>
+                        <Badge className={`${diffColor} border`}>{quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <Button className="w-full group" onClick={() => startQuiz(quiz)}>
+                        <Brain className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />
+                        Start Quiz
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </main>
