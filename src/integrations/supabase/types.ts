@@ -287,6 +287,7 @@ export type Database = {
           correct_answer: string
           created_at: string
           created_by: string
+          difficulty: string
           id: string
           option_a: string
           option_b: string
@@ -300,6 +301,7 @@ export type Database = {
           correct_answer: string
           created_at?: string
           created_by: string
+          difficulty?: string
           id?: string
           option_a: string
           option_b: string
@@ -313,6 +315,7 @@ export type Database = {
           correct_answer?: string
           created_at?: string
           created_by?: string
+          difficulty?: string
           id?: string
           option_a?: string
           option_b?: string

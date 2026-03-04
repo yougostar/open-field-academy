@@ -1,0 +1,1 @@
+ALTER TABLE public.quizzes ADD COLUMN IF NOT EXISTS difficulty text NOT NULL DEFAULT 'easy' CHECK (difficulty IN ('easy', 'moderate', 'hard'));
