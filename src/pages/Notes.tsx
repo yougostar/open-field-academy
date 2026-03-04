@@ -10,9 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NoteBookmarkButton } from "@/components/NoteBookmarkButton";
 import { PdfPreviewDialog } from "@/components/PdfPreviewDialog";
+import { NoteContentDialog } from "@/components/NoteContentDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, Download, Eye, Plus, Trash2 } from "lucide-react";
+import { FileText, Search, Download, Eye, Plus, Trash2, BookOpen } from "lucide-react";
 
 const Notes = () => {
   const { toast } = useToast();
@@ -23,6 +24,7 @@ const Notes = () => {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewNote, setPreviewNote] = useState<any>(null);
+  const [readNote, setReadNote] = useState<any>(null);
 
   const classes = ["All", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5"];
   const subjects = ["All", "Maths", "Science", "Social Science", "Hindi", "English"];
@@ -211,10 +213,13 @@ const Notes = () => {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
+                    <Button variant="secondary" size="sm" className="w-full" onClick={() => setReadNote(note)}>
+                      <BookOpen className="h-4 w-4 mr-2" />Read Note
+                    </Button>
                     {note.file_url && (
                       <div className="flex gap-2">
                         <Button variant="default" size="sm" className="flex-1" onClick={() => setPreviewNote(note)}>
-                          <Eye className="h-4 w-4 mr-2" />View
+                          <Eye className="h-4 w-4 mr-2" />View PDF
                         </Button>
                         <Button variant="outline" size="sm" className="flex-1" onClick={() => { const a = document.createElement("a"); a.href = note.file_url; a.download = `${note.title}.pdf`; a.click(); }}>
                           <Download className="h-4 w-4 mr-2" />Download
@@ -242,6 +247,12 @@ const Notes = () => {
           title={previewNote.title}
         />
       )}
+
+      <NoteContentDialog
+        open={!!readNote}
+        onOpenChange={(open) => !open && setReadNote(null)}
+        note={readNote}
+      />
     </div>
   );
 };
