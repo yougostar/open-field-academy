@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   Quote,
+  Video,
 } from "lucide-react";
 import { Button } from "./ui/button";
 
