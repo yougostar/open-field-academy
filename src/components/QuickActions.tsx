@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, Brain, TrendingUp, BookOpen, Lightbulb, FolderOpen } from "lucide-react";
+import { FileText, Brain, TrendingUp, BookOpen, Lightbulb, FolderOpen, Video } from "lucide-react";
 
 const actions = [
   { icon: FileText, label: "Study Notes", description: "Download class-wise notes", path: "/notes", gradient: "from-blue-500 to-cyan-500" },
