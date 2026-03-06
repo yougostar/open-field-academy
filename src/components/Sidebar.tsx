@@ -25,6 +25,7 @@ const navItems = [
   { title: "Quizzes", icon: BookOpen, path: "/quizzes" },
   { title: "Progress", icon: TrendingUp, path: "/progress" },
   { title: "Life Skills", icon: Heart, path: "/life-skills" },
+  { title: "Live Class", icon: Video, path: "/live-class" },
   { title: "Settings", icon: Settings, path: "/settings" },
   { title: "Admin", icon: Shield, path: "/admin-dashboard", adminOnly: true },
 ];
