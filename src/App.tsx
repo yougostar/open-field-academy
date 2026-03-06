@@ -16,6 +16,7 @@ import LifeSkills from "./pages/LifeSkills";
 import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/AdminDashboard";
 import StudyResources from "./pages/StudyResources";
+import LiveClass from "./pages/LiveClass";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
