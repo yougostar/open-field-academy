@@ -152,6 +152,53 @@ export type Database = {
           },
         ]
       }
+      live_sessions: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          ended_at: string | null
+          id: string
+          is_active: boolean
+          room_id: string
+          started_at: string | null
+          subject: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean
+          room_id: string
+          started_at?: string | null
+          subject: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          ended_at?: string | null
+          id?: string
+          is_active?: boolean
+          room_id?: string
+          started_at?: string | null
+          subject?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_sessions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       note_bookmarks: {
         Row: {
           created_at: string

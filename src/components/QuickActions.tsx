@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, Brain, TrendingUp, BookOpen, Lightbulb, FolderOpen } from "lucide-react";
+import { FileText, Brain, TrendingUp, BookOpen, Lightbulb, FolderOpen, Video } from "lucide-react";
 
 const actions = [
   { icon: FileText, label: "Study Notes", description: "Download class-wise notes", path: "/notes", gradient: "from-blue-500 to-cyan-500" },
@@ -9,6 +9,7 @@ const actions = [
   { icon: BookOpen, label: "Courses", description: "Explore all courses", path: "/courses", gradient: "from-orange-500 to-amber-500" },
   { icon: Lightbulb, label: "Life Skills", description: "Practical skills", path: "/life-skills", gradient: "from-rose-500 to-red-500" },
   { icon: FolderOpen, label: "Resources", description: "Study materials", path: "/resources", gradient: "from-indigo-500 to-violet-500" },
+  { icon: Video, label: "Live Class", description: "Join live sessions", path: "/live-class", gradient: "from-red-500 to-rose-500" },
 ];
 
 export const QuickActions = () => {
