@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Users, Clock } from "lucide-react";
+import { BookOpen, Users, Clock, MessageSquare } from "lucide-react";
 
 interface Course {
   id: string;
@@ -25,6 +26,7 @@ interface Enrollment {
 
 const Courses = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [userId, setUserId] = useState<string>("");
@@ -149,6 +151,14 @@ const Courses = () => {
                             style={{ width: `${getEnrollmentProgress(course.id)}%` }}
                           />
                         </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-1"
+                          onClick={() => navigate(`/courses/${course.id}/discussion`)}
+                        >
+                          <MessageSquare className="h-4 w-4" /> Discussion
+                        </Button>
                       </div>
                     ) : (
                       <Button 

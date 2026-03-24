@@ -17,6 +17,7 @@ import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/AdminDashboard";
 import StudyResources from "./pages/StudyResources";
 import LiveClass from "./pages/LiveClass";
+import CourseDiscussion from "./pages/CourseDiscussion";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
           <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
           <Route path="/resources" element={<ProtectedRoute><StudyResources /></ProtectedRoute>} />
           <Route path="/live-class" element={<ProtectedRoute><LiveClass /></ProtectedRoute>} />
+          <Route path="/courses/:courseId/discussion" element={<ProtectedRoute><CourseDiscussion /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
