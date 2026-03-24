@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Users, Clock } from "lucide-react";
+import { BookOpen, Users, Clock, MessageSquare } from "lucide-react";
 
 interface Course {
   id: string;
