@@ -17,6 +17,7 @@ import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/AdminDashboard";
 import StudyResources from "./pages/StudyResources";
 import LiveClass from "./pages/LiveClass";
+import CourseDiscussion from "./pages/CourseDiscussion";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
