@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Search, User, Sun, Moon } from "lucide-react";
+import { LiveClassNotification } from "./LiveClassNotification";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 
@@ -49,6 +50,7 @@ export const Topbar = ({ onSearch }: TopbarProps) => {
           </Button>
         </div>
       </div>
+      <LiveClassNotification />
     </header>
   );
 };
