@@ -27,6 +27,7 @@ interface LiveSession {
   is_active: boolean;
   started_at: string | null;
   scheduled_at: string | null;
+  ended_at: string | null;
   created_at: string;
 }
 
