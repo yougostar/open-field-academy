@@ -26,6 +26,7 @@ interface Enrollment {
 
 const Courses = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [userId, setUserId] = useState<string>("");
