@@ -8,9 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Video, VideoOff, Plus, Users, Clock, Radio } from "lucide-react";
+import { format } from "date-fns";
+import { Video, VideoOff, Plus, Users, Clock, Radio, CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface LiveSession {
   id: string;
@@ -21,6 +26,7 @@ interface LiveSession {
   created_by: string;
   is_active: boolean;
   started_at: string | null;
+  scheduled_at: string | null;
   created_at: string;
 }
 
@@ -35,6 +41,9 @@ const LiveClass = () => {
   const [newTitle, setNewTitle] = useState("");
   const [newSubject, setNewSubject] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [scheduleDate, setScheduleDate] = useState<Date | undefined>();
+  const [scheduleTime, setScheduleTime] = useState("");
+  const [isScheduled, setIsScheduled] = useState(false);
   const jitsiContainerRef = useRef<HTMLDivElement>(null);
   const jitsiApiRef = useRef<any>(null);
 
@@ -70,27 +79,57 @@ const LiveClass = () => {
     if (!newTitle || !newSubject || !userId) return;
     const roomId = `aarambh-${newSubject.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
 
+    let scheduledAt: string | null = null;
+    if (isScheduled && scheduleDate && scheduleTime) {
+      const [hours, minutes] = scheduleTime.split(":").map(Number);
+      const dt = new Date(scheduleDate);
+      dt.setHours(hours, minutes, 0, 0);
+      scheduledAt = dt.toISOString();
+    }
+
+    const goLiveNow = !isScheduled;
+
     const { error } = await supabase.from("live_sessions").insert({
       title: newTitle,
       subject: newSubject,
       description: newDescription,
       room_id: roomId,
       created_by: userId,
-      is_active: true,
-      started_at: new Date().toISOString(),
+      is_active: goLiveNow,
+      started_at: goLiveNow ? new Date().toISOString() : null,
+      scheduled_at: scheduledAt,
     });
 
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Session created!", description: "Students can now join." });
-      setCreateOpen(false);
-      setNewTitle("");
-      setNewSubject("");
-      setNewDescription("");
+      toast({
+        title: goLiveNow ? "Session created!" : "Session scheduled!",
+        description: goLiveNow ? "Students can now join." : `Scheduled for ${format(new Date(scheduledAt!), "PPP 'at' p")}`,
+      });
+      resetForm();
       fetchData();
-      joinRoom(roomId);
+      if (goLiveNow) joinRoom(roomId);
     }
+  };
+
+  const resetForm = () => {
+    setCreateOpen(false);
+    setNewTitle("");
+    setNewSubject("");
+    setNewDescription("");
+    setScheduleDate(undefined);
+    setScheduleTime("");
+    setIsScheduled(false);
+  };
+
+  const startScheduledSession = async (session: LiveSession) => {
+    await supabase.from("live_sessions").update({
+      is_active: true,
+      started_at: new Date().toISOString(),
+    }).eq("id", session.id);
+    fetchData();
+    joinRoom(session.room_id);
   };
 
   const toggleSession = async (session: LiveSession) => {
@@ -107,7 +146,6 @@ const LiveClass = () => {
 
   const joinRoom = (roomId: string) => {
     setActiveRoom(roomId);
-    // Jitsi will be loaded via useEffect
   };
 
   const leaveRoom = () => {
@@ -181,8 +219,12 @@ const LiveClass = () => {
     };
   }, [activeRoom]);
 
+  const now = new Date();
   const activeSessions = sessions.filter((s) => s.is_active);
-  const pastSessions = sessions.filter((s) => !s.is_active);
+  const scheduledSessions = sessions.filter(
+    (s) => !s.is_active && s.scheduled_at && new Date(s.scheduled_at) > now && !s.ended_at
+  );
+  const pastSessions = sessions.filter((s) => !s.is_active && (!s.scheduled_at || new Date(s.scheduled_at) <= now || s.ended_at));
 
   if (activeRoom) {
     return (
@@ -191,7 +233,7 @@ const LiveClass = () => {
         <div className="flex-1 md:ml-64 flex flex-col">
           <div className="p-3 bg-card border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Radio className="h-4 w-4 text-red-500 animate-pulse" />
+              <Radio className="h-4 w-4 text-destructive animate-pulse" />
               <span className="font-semibold text-sm text-foreground">Live Session</span>
             </div>
             <Button variant="destructive" size="sm" onClick={leaveRoom}>
@@ -216,15 +258,15 @@ const LiveClass = () => {
               <p className="text-muted-foreground mt-1">Join live sessions with your teachers</p>
             </div>
             {isTeacher && (
-              <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+              <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>
                 <DialogTrigger asChild>
                   <Button className="gap-2">
-                    <Plus className="h-4 w-4" />Start Live Class
+                    <Plus className="h-4 w-4" />Start / Schedule
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Start a Live Class</DialogTitle>
+                    <DialogTitle>{isScheduled ? "Schedule a Live Class" : "Start a Live Class"}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 pt-2">
                     <Input placeholder="Session title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
@@ -237,8 +279,76 @@ const LiveClass = () => {
                       </SelectContent>
                     </Select>
                     <Textarea placeholder="Description (optional)" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
-                    <Button className="w-full" onClick={createSession} disabled={!newTitle || !newSubject}>
-                      <Video className="h-4 w-4 mr-2" />Go Live
+
+                    {/* Toggle between Go Live and Schedule */}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={!isScheduled ? "default" : "outline"}
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setIsScheduled(false)}
+                      >
+                        <Video className="h-4 w-4 mr-1" />Go Live Now
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={isScheduled ? "default" : "outline"}
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setIsScheduled(true)}
+                      >
+                        <CalendarIcon className="h-4 w-4 mr-1" />Schedule
+                      </Button>
+                    </div>
+
+                    {isScheduled && (
+                      <div className="space-y-3 rounded-lg border border-border p-3">
+                        <div>
+                          <Label className="text-sm mb-1.5 block">Date</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn("w-full justify-start text-left font-normal", !scheduleDate && "text-muted-foreground")}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {scheduleDate ? format(scheduleDate, "PPP") : "Pick a date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={scheduleDate}
+                                onSelect={setScheduleDate}
+                                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                                initialFocus
+                                className="p-3 pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <div>
+                          <Label className="text-sm mb-1.5 block">Time</Label>
+                          <Input
+                            type="time"
+                            value={scheduleTime}
+                            onChange={(e) => setScheduleTime(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <Button
+                      className="w-full"
+                      onClick={createSession}
+                      disabled={!newTitle || !newSubject || (isScheduled && (!scheduleDate || !scheduleTime))}
+                    >
+                      {isScheduled ? (
+                        <><CalendarIcon className="h-4 w-4 mr-2" />Schedule Class</>
+                      ) : (
+                        <><Video className="h-4 w-4 mr-2" />Go Live</>
+                      )}
                     </Button>
                   </div>
                 </DialogContent>
@@ -249,7 +359,7 @@ const LiveClass = () => {
           {/* Active Sessions */}
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3 flex items-center gap-2">
-              <Radio className="h-5 w-5 text-red-500 animate-pulse" />
+              <Radio className="h-5 w-5 text-destructive animate-pulse" />
               Live Now
             </h2>
             {loading ? (
@@ -264,7 +374,7 @@ const LiveClass = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activeSessions.map((session) => (
-                  <Card key={session.id} className="border-red-500/30 shadow-lg hover:shadow-xl transition-shadow">
+                  <Card key={session.id} className="border-destructive/30 shadow-lg hover:shadow-xl transition-shadow">
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between">
                         <CardTitle className="text-lg">{session.title}</CardTitle>
@@ -296,6 +406,43 @@ const LiveClass = () => {
               </div>
             )}
           </section>
+
+          {/* Scheduled Sessions */}
+          {scheduledSessions.length > 0 && (
+            <section>
+              <h2 className="text-xl font-semibold text-foreground mb-3 flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5 text-primary" />
+                Upcoming Scheduled
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {scheduledSessions.map((session) => (
+                  <Card key={session.id} className="border-primary/20">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <CardTitle className="text-lg">{session.title}</CardTitle>
+                        <Badge variant="outline" className="border-primary/40 text-primary">Scheduled</Badge>
+                      </div>
+                      <Badge variant="secondary" className="w-fit">{session.subject}</Badge>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {session.description && (
+                        <p className="text-sm text-muted-foreground">{session.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <CalendarIcon className="h-3 w-3" />
+                        {format(new Date(session.scheduled_at!), "PPP 'at' p")}
+                      </div>
+                      {isTeacher && session.created_by === userId && (
+                        <Button className="w-full" onClick={() => startScheduledSession(session)}>
+                          <Video className="h-4 w-4 mr-2" />Start Now
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Past Sessions */}
           {pastSessions.length > 0 && (
