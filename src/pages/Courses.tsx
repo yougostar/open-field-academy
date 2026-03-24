@@ -151,6 +151,14 @@ const Courses = () => {
                             style={{ width: `${getEnrollmentProgress(course.id)}%` }}
                           />
                         </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-1"
+                          onClick={() => navigate(`/courses/${course.id}/discussion`)}
+                        >
+                          <MessageSquare className="h-4 w-4" /> Discussion
+                        </Button>
                       </div>
                     ) : (
                       <Button 
