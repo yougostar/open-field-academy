@@ -161,6 +161,7 @@ export type Database = {
           id: string
           is_active: boolean
           room_id: string
+          scheduled_at: string | null
           started_at: string | null
           subject: string
           title: string
@@ -173,6 +174,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           room_id: string
+          scheduled_at?: string | null
           started_at?: string | null
           subject: string
           title: string
@@ -185,6 +187,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           room_id?: string
+          scheduled_at?: string | null
           started_at?: string | null
           subject?: string
           title?: string
