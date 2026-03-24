@@ -50,6 +50,7 @@ export const Topbar = ({ onSearch }: TopbarProps) => {
           </Button>
         </div>
       </div>
+      <LiveClassNotification />
     </header>
   );
 };
