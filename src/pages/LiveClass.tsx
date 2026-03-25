@@ -74,7 +74,7 @@ const LiveClass = () => {
     }
   };
 
-  const isTeacher = userRoles.includes("instructor") || userRoles.includes("admin");
+  const isTeacher = userRoles.includes("admin");
 
   const createSession = async () => {
     if (!newTitle || !newSubject || !userId) return;
