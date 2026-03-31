@@ -15,12 +15,13 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 
-import { Shield, User, BookOpenIcon } from "lucide-react";
+import { Shield, User, BookOpenIcon, Presentation } from "lucide-react";
 
 const navItems = [
   { title: "Home", icon: LayoutDashboard, path: "/" },
   { title: "Profile", icon: User, path: "/profile" },
   { title: "Courses", icon: BookOpenIcon, path: "/courses" },
+  { title: "Video Lectures", icon: Presentation, path: "/video-lectures" },
   { title: "Notes", icon: FileText, path: "/notes" },
   { title: "Quizzes", icon: BookOpen, path: "/quizzes" },
   { title: "Progress", icon: TrendingUp, path: "/progress" },
