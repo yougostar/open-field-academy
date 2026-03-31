@@ -110,7 +110,7 @@ const Index = () => {
             {/* Categories */}
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-6">Browse by Category</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {["All", "Maths", "Science", "English", "Hindi", "Social Science"].map((category) => (
                   <Button
                     key={category}
