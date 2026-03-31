@@ -9,29 +9,8 @@ import { QuickActions } from "@/components/QuickActions";
 import { RecentActivityFeed } from "@/components/RecentActivityFeed";
 import { Button } from "@/components/ui/button";
 import { Search, Download } from "lucide-react";
-import mathImage from "@/assets/feature-ai.jpg";
-import scienceImage from "@/assets/feature-gamification.jpg";
-import englishImage from "@/assets/feature-multilang.jpg";
 import heroImage from "@/assets/hero-learning.jpg";
-
-interface Lesson {
-  id: string;
-  title: string;
-  description: string;
-  image: string;
-  category: string;
-}
-
-const allLessons: Lesson[] = [
-  { id: "1", title: "Introduction to Algebra", description: "Learn the basics of algebra with fun examples and interactive exercises.", image: mathImage, category: "Math" },
-  { id: "2", title: "Geometry Fundamentals", description: "Explore shapes, angles, and spatial relationships in this comprehensive guide.", image: mathImage, category: "Math" },
-  { id: "3", title: "Physics: Force and Motion", description: "Understand Newton's laws and how objects move in the physical world.", image: scienceImage, category: "Science" },
-  { id: "4", title: "Biology: Cell Structure", description: "Dive into the microscopic world of cells and their amazing functions.", image: scienceImage, category: "Science" },
-  { id: "5", title: "English Grammar Basics", description: "Master the fundamentals of English grammar with simple explanations.", image: englishImage, category: "English" },
-  { id: "6", title: "Creative Writing Workshop", description: "Unleash your creativity and learn storytelling techniques.", image: englishImage, category: "English" },
-  { id: "7", title: "Chemistry: Elements & Compounds", description: "Discover the building blocks of matter and chemical reactions.", image: scienceImage, category: "Science" },
-  { id: "8", title: "Math Word Problems", description: "Solve real-world problems using mathematical thinking and logic.", image: mathImage, category: "Math" },
-];
+import { allLessons } from "@/data/lessons";
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -131,8 +110,8 @@ const Index = () => {
             {/* Categories */}
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-6">Browse by Category</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {["All", "Math", "Science", "English"].map((category) => (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {["All", "Maths", "Science", "English", "Hindi", "Social Science"].map((category) => (
                   <Button
                     key={category}
                     variant={searchQuery === category.toLowerCase() ? "default" : "outline"}
