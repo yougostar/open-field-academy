@@ -108,6 +108,9 @@ const Index = () => {
               </div>
             </div>
 
+            {/* Learning Wish Board */}
+            <LearningWishBoard />
+
             {/* Categories */}
             <section>
               <h2 className="text-2xl font-bold text-foreground mb-6">Browse by Category</h2>
