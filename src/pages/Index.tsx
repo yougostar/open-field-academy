@@ -7,6 +7,7 @@ import { GoogleTranslate } from "@/components/GoogleTranslate";
 import { DashboardStats } from "@/components/DashboardStats";
 import { QuickActions } from "@/components/QuickActions";
 import { RecentActivityFeed } from "@/components/RecentActivityFeed";
+import { LearningWishBoard } from "@/components/LearningWishBoard";
 import { Button } from "@/components/ui/button";
 import { Search, Download } from "lucide-react";
 import heroImage from "@/assets/hero-learning.jpg";
@@ -106,6 +107,9 @@ const Index = () => {
                 <GoogleTranslate />
               </div>
             </div>
+
+            {/* Learning Wish Board */}
+            <LearningWishBoard />
 
             {/* Categories */}
             <section>
